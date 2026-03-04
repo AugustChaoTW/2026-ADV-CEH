@@ -1,8 +1,6 @@
 # 進階駭客攻防 0220 notes
 
-:point_left: [Back to Index](/TQbsIJhYS_-qq6wifUb_0w)
 
-[TOC]
 
 ## 1. [runme.py](https://play.picoctf.org/practice/challenge/250)
 
