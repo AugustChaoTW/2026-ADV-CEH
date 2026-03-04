@@ -11,8 +11,8 @@
 
 | Item | Details |
 |------|---------|
-| **Instructor** | Zhao Feng-Yi (趙逢毅) |
-| **Email** | t20148@gms.npu.edu.tw |
+| **Instructor** | August Chao (趙逢毅) |
+| **Email** | Augchao@gms.npu.edu.tw |
 | **Phone** | 3511 |
 | **Class Time** | Wednesday 6, Thursday 3-4 |
 | **Office Hours** | Wednesday 5-7 |
