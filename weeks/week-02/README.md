@@ -32,7 +32,7 @@ sudo systemctl enable nginx
 
 3. 確認 nginx 狀態
 ```bash
-sudo systemctl status nginx --no-pager
+sudo systemctl status nginx
 ```
 
 4. 用瀏覽器測試
