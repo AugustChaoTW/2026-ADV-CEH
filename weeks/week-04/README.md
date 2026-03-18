@@ -25,11 +25,20 @@
 > - **成因：** WebGL 繪製函數在處理超大型或負數索引時未進行適當邊界檢查  
 > - **影響：** 攻擊者可透過惡意網頁實現任意記憶體讀寫，進而達到遠端程式執行（RCE）  
 > - **CVSS 分數：** 9.8（Critical）  
-> - **參考資源：**  
+>   - **參考資源：**  
 >   - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-14174  
 >   - https://webkit.org/blog/15000/webgl-security-update/  
 >   - https://chromereleases.googleblog.com/2025/03/chrome-security-update.html  
+>   - https://cloud.google.com/blog/topics/threat-intelligence/darksword-ios-exploit-chain  
 
+## 3. 為什麼叫「DarkSword」？
+「DarkSword」是安全研究團隊在分析該漏洞時為其取的代號，象徵：
+- **「Dark」**：代表漏洞隱藏在看似無害的 WebGL API 中，如同黑暗中的利刃難以察覺
+- **「Sword」**：表示此漏洞具有穿透力強的攻擊能力，能夠直接攻擊瀏覽器沙箱的核心，如同利刃直擊要害
+- 此命名方式常見於安全研究界，為重要漏洞賦予具象化的名稱，便於討論和追蹤（例如：Heartbleed、Spectre、Meltdown）
+- 在實際攻擊鏈中，DarkSword 通常作為初始入口點，經過一系列精心構造的步驟最終達到遠端程式執行
+
+---
 ### 漏洞原理簡述
 WebGL 的 `bufferSubData` 或類似函數在將使用者提供的資料複製到 GPU 緩衝時，會依賴 JavaScript 陣列的索引值進行位元運算。當索引為負數或超過緩衝長度時，由於缺少簽號擴展或範圍檢查，會導致位元運算產生巨大的正數索引，從而讀寫到緩衝區以外的記憶體。此漏洞可被利用來：
 1. 泄漏瀏覽器內部結構（如 JSCell、Map 等）
