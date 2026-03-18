@@ -186,7 +186,7 @@ python3 -m http.server 8080
 ---
 
 ## 8. 寫報告（20 分鐘）
-請在 Moodle / Google Doc 提交 **Week04_Report.md**，格式如下：
+請在 NPU eeclass 平台 提交 **Week04_Report.md**，格式如下：
 
 ```markdown
 # Week04 DarkSword-Lite CTF 報告
@@ -219,12 +219,7 @@ python3 -m http.server 8080
 ```
 
 ---
-
-## 9. 繳交與計分
-- **60%** 拿到正確 flag
-- **20%** 報告截圖 + Codex 心得
-- **20%** 原理說明清楚度
-
+ 
 **完成時間限制：1.5 小時內**  
 若卡住，請舉手或貼 Codex 提示到課程 Discord 求助。
 
