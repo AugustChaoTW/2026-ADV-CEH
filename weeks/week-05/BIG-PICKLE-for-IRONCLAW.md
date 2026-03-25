@@ -40,11 +40,9 @@ OPENCODE_SERVER_PASSWORD=test /home/fychao/.opencode/bin/opencode serve --port=5
 
 ### 2. 啟動代理伺服器
 
-使用我們創建的代理腳本：
-
 ```bash
 # 啟動代理（監聽 8081 端口）
-python3 /tmp/opencode-proxy.py &
+python3 /home/fychao/opencode-proxy.py &
 ```
 
 ### 3. 配置 IronClaw
@@ -125,12 +123,20 @@ class ProxyHandler(BaseHTTPRequestHandler):
             messages = data.get("messages", [])
             model = data.get("model", "big-pickle")
 
-            # 2. 轉換 messages 格式
+            # 2. 轉換 messages 格式 - 支援字串和陣列兩種格式
+            # IronClaw 發送陣列格式: [{"type": "text", "text": "..."}]
             parts = []
             for msg in messages:
                 content = msg.get("content", "")
                 if isinstance(content, str):
                     parts.append({"type": "text", "text": content})
+                elif isinstance(content, list):
+                    for item in content:
+                        if isinstance(item, dict):
+                            if item.get("type") == "text":
+                                text = item.get("text", "")
+                                if text:
+                                    parts.append({"type": "text", "text": text})
 
             # 3. 設置認證
             auth_encoded = base64.b64encode(
@@ -166,31 +172,19 @@ class ProxyHandler(BaseHTTPRequestHandler):
             with urllib.request.urlopen(msg_req) as resp:
                 result = json.loads(resp.read())
 
-            # 6. 提取回應文字
-            all_text = []
+            # 6. 提取回應文字 - 只取 text 類型的 part
+            response_text = ""
             for part in result.get("parts", []):
                 part_type = part.get("type", "")
                 if part_type == "text":
                     text = part.get("text", "")
-                    if text:
-                        all_text.append(text)
-                elif part_type == "reasoning":
-                    text = part.get("text", "")
-                    if text:
-                        all_text.append(f"[Reasoning] {text}")
-                elif part_type == "tool-result":
-                    text = part.get("result", {}).get("text", "")
-                    if text:
-                        all_text.append(text)
-
-            response_text = "\n".join(all_text)
+                    if text and text.strip():
+                        response_text = text.strip()
+                        break
 
             # 確保有內容
-            if not response_text or not response_text.strip():
-                response_text = result.get("info", {}).get("summary", {}).get("text", "Done")
-
             if not response_text:
-                response_text = "Completed"
+                response_text = "Done"
 
             # 7. 轉換為 OpenAI 格式
             output = {
@@ -242,7 +236,8 @@ if __name__ == "__main__":
 | OpenAI API | OpenCode API | 說明 |
 |------------|--------------|------|
 | `POST /v1/chat/completions` | `POST /session` + `POST /session/:id/message` | 創建 session 並發送訊息 |
-| `messages[].content` | `parts[].text` | 訊息內容格式 |
+| `messages[].content` (string) | `parts[].text` | 訊息內容格式 |
+| `messages[].content` (array) | `parts[].text` | IronClaw 使用陣列格式 |
 | `model` | `model.providerID` + `model.modelID` | 模型指定 |
 
 ### OpenCode Session API 詳情
@@ -282,6 +277,261 @@ Content-Type: application/json
     {"type": "text", "text": "回應內容"}
   ]
 }
+```
+
+## 代理健康監控
+
+### 問題
+
+在測試過程中，我們發現代理伺服器經常停止響應。可能的原因包括：
+
+1. **Python 進程被終止** - 可能被用戶或系統終止
+2. **端口被佔用** - 其他程序佔用了相同端口
+3. **OpenCode 伺服器連接失敗** - OpenCode 伺服器未運行或崩潰
+4. **網絡問題** - 本地網絡延遲或中斷
+5. **異常未被捕獲** - 未處理的異常導致進程崩潰
+
+### 解決方案
+
+#### 1. 使用 Systemd 服務（推薦）
+
+創建系統服務以自動啟動和監控：
+
+```ini
+# /etc/systemd/system/opencode-proxy.service
+[Unit]
+Description=OpenCode to OpenAI Proxy for Big-Pickle
+After=network.target
+
+[Service]
+Type=simple
+User=fychao
+WorkingDirectory=/home/fychao
+ExecStart=/usr/bin/python3 /home/fychao/opencode-proxy.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+# 啟用服務
+sudo systemctl daemon-reload
+sudo systemctl enable opencode-proxy
+sudo systemctl start opencode-proxy
+
+# 查看狀態
+sudo systemctl status opencode-proxy
+
+# 查看日誌
+sudo journalctl -u opencode-proxy -f
+```
+
+#### 2. 使用 Health Check 腳本
+
+創建健康檢查腳本：
+
+```bash
+#!/bin/bash
+# /home/fychao/check-proxy.sh
+
+PROXY_URL="http://localhost:8081/v1/chat/completions"
+OPENCODE_URL="http://localhost:5175/global/health"
+
+# 檢查代理是否響應
+check_proxy() {
+    curl -s -X POST "$PROXY_URL" \
+        -H "Content-Type: application/json" \
+        -d '{"model": "test", "messages": []}' \
+        --connect-timeout 2 \
+        --max-time 5 > /dev/null 2>&1
+    return $?
+}
+
+# 檢查 OpenCode 伺服器是否運行
+check_opencode() {
+    curl -s "$OPENCODE_URL" --connect-timeout 2 > /dev/null 2>&1
+    return $?
+}
+
+# 主檢查邏輯
+if ! check_proxy; then
+    echo "[ERROR] Proxy not responding, restarting..."
+    pkill -f opencode-proxy.py
+    sleep 2
+    cd /home/fychao
+    nohup python3 /home/fychao/opencode-proxy.py > /tmp/proxy.log 2>&1 &
+    sleep 3
+    
+    if check_proxy; then
+        echo "[OK] Proxy restarted successfully"
+    else
+        echo "[ERROR] Failed to restart proxy"
+    fi
+fi
+
+if ! check_opencode; then
+    echo "[WARN] OpenCode server not responding"
+fi
+```
+
+添加到 crontab 每分鐘檢查：
+
+```bash
+# crontab -e
+* * * * * /home/fychao/check-proxy.sh
+```
+
+#### 3. 使用 Docker 容器（最佳方案）
+
+```dockerfile
+# Dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+COPY opencode-proxy.py .
+
+CMD ["python3", "opencode-proxy.py"]
+```
+
+```bash
+# 構建和運行
+docker build -t opencode-proxy .
+docker run -d \
+    --name opencode-proxy \
+    -p 8081:8081 \
+    --network host \
+    -e OPENCODE_HOST=host.docker.internal \
+    opencode-proxy
+```
+
+#### 4. 內建重試機制
+
+在代理中添加自動重試邏輯：
+
+```python
+import time
+
+def call_with_retry(func, max_retries=3, delay=1):
+    """帶重試的函數調用"""
+    for attempt in range(max_retries):
+        try:
+            return func()
+        except Exception as e:
+            if attempt < max_retries - 1:
+                print(f"Retry {attempt + 1}/{max_retries}: {e}")
+                time.sleep(delay)
+            else:
+                raise
+
+# 使用示例
+def create_session():
+    # ... 創建 session 的邏輯
+    pass
+
+session = call_with_retry(create_session)
+```
+
+### 監控腳本
+
+創建 `/home/fychao/monitor-proxy.sh`：
+
+```bash
+#!/bin/bash
+# 監控代理和 OpenCode 伺服器
+
+LOG_FILE="/tmp/proxy-monitor.log"
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+}
+
+# 檢查端口
+check_port() {
+    local port=$1
+    ss -tlnp 2>/dev/null | grep -q ":$port " && return 0 || return 1
+}
+
+# 測試代理
+test_proxy() {
+    curl -s -X POST "http://localhost:8081/v1/chat/completions" \
+        -H "Content-Type: application/json" \
+        -d '{"model": "test", "messages": [{"role": "user", "content": "test"}]}' \
+        --connect-timeout 3 --max-time 10 > /dev/null 2>&1
+    return $?
+}
+
+# 測試 OpenCode
+test_opencode() {
+    curl -s "http://localhost:5175/global/health" \
+        --connect-timeout 3 --max-time 5 > /dev/null 2>&1
+    return $?
+}
+
+# 主邏輯
+log "Starting proxy monitor..."
+
+while true; do
+    # 檢查 OpenCode
+    if ! test_opencode; then
+        log "[WARN] OpenCode server not responding"
+    fi
+    
+    # 檢查代理
+    if ! test_proxy; then
+        log "[ERROR] Proxy not responding, attempting restart..."
+        
+        # 終止舊進程
+        pkill -f "python3.*opencode-proxy" 2>/dev/null
+        sleep 2
+        
+        # 重啟代理
+        cd /home/fychao
+        nohup python3 /home/fychao/opencode-proxy.py >> /tmp/proxy.log 2>&1 &
+        PROXY_PID=$!
+        
+        sleep 3
+        
+        if test_proxy; then
+            log "[OK] Proxy restarted (PID: $PROXY_PID)"
+        else
+            log "[ERROR] Failed to restart proxy"
+        fi
+    fi
+    
+    sleep 30  # 每 30 秒檢查一次
+done
+```
+
+### 快速重啟腳本
+
+創建 `/home/fychao/restart-proxy.sh`：
+
+```bash
+#!/bin/bash
+# 快速重啟代理
+
+echo "Stopping existing proxy..."
+pkill -f "python3.*opencode-proxy" 2>/dev/null
+sleep 1
+
+echo "Starting proxy..."
+cd /home/fychao
+nohup python3 /home/fychao/opencode-proxy.py > /tmp/proxy.log 2>&1 &
+sleep 2
+
+# 測試
+if curl -s -X POST "http://localhost:8081/v1/chat/completions" \
+    -H "Content-Type: application/json" \
+    -d '{"model": "test", "messages": []}' \
+    --connect-timeout 5 > /dev/null 2>&1; then
+    echo "Proxy is running!"
+else
+    echo "Proxy failed to start. Check /tmp/proxy.log"
+fi
 ```
 
 ## 已知問題
@@ -371,8 +621,48 @@ export LLM_MODEL=big-pickle
 ironclaw run --no-onboard -m "Hello"
 ```
 
+### 測試檔案創建
+
+```bash
+ironclaw run --no-onboard -m "Create a file called test.txt with content 'hello world'"
+ls -la test.txt
+```
+
+## 故障排除
+
+### 代理無法啟動
+
+```bash
+# 檢查端口是否被佔用
+ss -tlnp | grep 8081
+
+# 殺死佔用進程
+fuser -k 8081/tcp
+
+# 重新啟動代理
+/home/fychao/restart-proxy.sh
+```
+
+### IronClaw 顯示 "Done"
+
+這通常意味著代理沒有收到正確的請求。檢查：
+
+1. 代理是否運行：`ps aux | grep opencode-proxy`
+2. 端口是否監聽：`ss -tlnp | grep 8081`
+3. 日誌是否有錯誤：`cat /tmp/proxy.log`
+
+### Rate Limit 錯誤
+
+如果看到 rate limit 錯誤：
+
+1. 等待一段時間再試
+2. 檢查 OpenCode 伺服器是否正常運行
+3. 嘗試重啟 OpenCode 伺服器
+
 ## 相關文件
 
-- 代理腳本：`/tmp/opencode-proxy.py`
+- 代理腳本：`/home/fychao/opencode-proxy.py`
+- 監控腳本：`/home/fychao/monitor-proxy.sh`
+- 重啟腳本：`/home/fychao/restart-proxy.sh`
 - OpenCode 位置：`/home/fychao/.opencode/`
 - 認證方式：HTTP Basic Auth（用戶名：opencode）
