@@ -194,13 +194,6 @@ def fetch():
     return f"<pre>{resp.text}</pre>"
 ```
 
-## 九、計分規則
+## 九、繳交說明
 
-| 項目 | 分數 |
-|------|------|
-| 🟢 Flag 1 | 15 分 |
-| 🟡 Flag 2 | 20 分 |
-| 🟠 Flag 3 | 30 分 |
-| 🔴 Flag 4 | 35 分 |
-| 藍隊修補後成功擋住（每個 Flag）| +10 分 |
-| 紅隊找到未預期的 bypass | +15 分 |
+本週實作結果請依 `pentest-report-template.md` 格式繳交滲透測試報告，每人一份。
